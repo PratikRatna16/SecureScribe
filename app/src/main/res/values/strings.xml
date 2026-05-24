@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">SecureScribe</string>
+    <string name="s1"> Enter Password </string>
+    <string name="s2"> Password </string>
+    <string name="s3"> Title </string>
+    <string name="s4"> Note Title </string>
+    <string name="s5"> Text of User Notes </string>
+    <string name="s6"> Write Notes </string>
+    <string name="s7"> Change Password </string>
+    <string name="b1"> Unlock </string>
+    <string name="b2"> Add note </string>
+    <string name="b3"> Edit note </string>
+    <string name="t1"> Delete </string>
+    <string name="t2"> Settings </string>
+    <string name="t3"> Archive </string>
+    <string name="t4"> Home </string>
+    <string name="navigation_drawer_open"> Open </string>
+    <string name="navigation_drawer_close"> Close </string>
+</resources>
