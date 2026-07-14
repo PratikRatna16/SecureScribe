@@ -8,6 +8,9 @@ import androidx.room.RoomDatabase;
 import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 @Database(entities = {Note.class}, version = 2)
 public abstract class NoteDatabase extends RoomDatabase {
     private static final Migration MIGRATION_1_2 = new Migration(1, 2) {
@@ -19,6 +22,10 @@ public abstract class NoteDatabase extends RoomDatabase {
         }
     };
     private static NoteDatabase instance;
+    private static final int NUMBER_OF_THREADS = 4;
+    public static final ExecutorService databaseWriteExecutor =
+            Executors.newFixedThreadPool(NUMBER_OF_THREADS);
+
     public abstract NoteDao noteDao();
 
     public static synchronized NoteDatabase getInstance(Context context){
@@ -28,7 +35,7 @@ public abstract class NoteDatabase extends RoomDatabase {
                     NoteDatabase.class,
                     "note_database"
             ).addMigrations(MIGRATION_1_2)
-                    .allowMainThreadQueries().build();
+                    .build();
         }
         return instance;
     }

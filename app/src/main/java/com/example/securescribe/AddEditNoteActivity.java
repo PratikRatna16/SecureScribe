@@ -48,16 +48,20 @@ EditText Title,multiline;
                 String content = multiline.getText().toString().trim();
 
                 if (!title.isEmpty()) {
-                    if (noteId == -1) {
-                        Note note = new Note(title, content, System.currentTimeMillis());
-                        NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().insert(note);
-                    } else {
-                        Note note = new Note(title, content, System.currentTimeMillis());
-                        note.setId(noteId);
-                        NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().update(note);
-                    }
+                    NoteDatabase.databaseWriteExecutor.execute(() -> {
+                        if (noteId == -1) {
+                            Note note = new Note(title, content, System.currentTimeMillis());
+                            NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().insert(note);
+                        } else {
+                            Note note = new Note(title, content, System.currentTimeMillis());
+                            note.setId(noteId);
+                            NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().update(note);
+                        }
+                        runOnUiThread(AddEditNoteActivity.this::finish);
+                    });
+                } else {
+                    finish();
                 }
-                finish();
             }
         });
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -82,18 +86,20 @@ EditText Title,multiline;
             String content = multiline.getText().toString().trim();
 
             if (title.isEmpty()) {
-                Title.setError("Title required");
+                Title.setError(getString(R.string.error_title_required));
                 return true;
             }
-            if (noteId == -1) {
-                Note note = new Note(title, content, System.currentTimeMillis());
-                NoteDatabase.getInstance(this).noteDao().insert(note);
-            } else {
-                Note note = new Note(title, content, System.currentTimeMillis());
-                note.setId(noteId);
-                NoteDatabase.getInstance(this).noteDao().update(note);
-            }
-            finish();
+            NoteDatabase.databaseWriteExecutor.execute(() -> {
+                if (noteId == -1) {
+                    Note note = new Note(title, content, System.currentTimeMillis());
+                    NoteDatabase.getInstance(this).noteDao().insert(note);
+                } else {
+                    Note note = new Note(title, content, System.currentTimeMillis());
+                    note.setId(noteId);
+                    NoteDatabase.getInstance(this).noteDao().update(note);
+                }
+                runOnUiThread(this::finish);
+            });
             return true;
         }
         return super.onOptionsItemSelected(item);

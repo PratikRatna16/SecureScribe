@@ -77,8 +77,12 @@ FloatingActionButton FloatAction;
     @Override
     protected void onResume() {
         super.onResume();
-        List<Note> notes = NoteDatabase.getInstance(this).noteDao().getAllNotes();
-        NoteAdapter adapter = new NoteAdapter(notes);
-        rv.setAdapter(adapter);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getAllNotes();
+            runOnUiThread(() -> {
+                NoteAdapter adapter = new NoteAdapter(notes);
+                rv.setAdapter(adapter);
+            });
+        });
     }
 }

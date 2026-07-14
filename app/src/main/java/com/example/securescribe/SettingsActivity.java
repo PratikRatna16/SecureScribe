@@ -23,7 +23,7 @@ TextView tvChangePassword;
         tvChangePassword = findViewById(R.id.tvChangePassword);
         setSupportActionBar(findViewById(R.id.toolbar));
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Settings");
+        getSupportActionBar().setTitle(R.string.title_settings);
 
         tvChangePassword.setOnClickListener(v -> {
             android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
@@ -31,17 +31,17 @@ TextView tvChangePassword;
             layout.setPadding(50, 20, 50, 20);
 
             android.widget.EditText etCurrent = new android.widget.EditText(this);
-            etCurrent.setHint("Current Password");
+            etCurrent.setHint(R.string.hint_current_password);
             etCurrent.setInputType(android.text.InputType.TYPE_CLASS_TEXT |
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
             android.widget.EditText etNew = new android.widget.EditText(this);
-            etNew.setHint("New Password");
+            etNew.setHint(R.string.hint_new_password);
             etNew.setInputType(android.text.InputType.TYPE_CLASS_TEXT |
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
             android.widget.EditText etConfirm = new android.widget.EditText(this);
-            etConfirm.setHint("Confirm New Password");
+            etConfirm.setHint(R.string.hint_confirm_new_password);
             etConfirm.setInputType(android.text.InputType.TYPE_CLASS_TEXT |
                     android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
@@ -50,10 +50,10 @@ TextView tvChangePassword;
             layout.addView(etConfirm);
 
             androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("Change Password")
+                    .setTitle(R.string.dialog_change_password)
                     .setView(layout)
-                    .setPositiveButton("Save", null)
-                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton(R.string.action_save, null)
+                    .setNegativeButton(R.string.action_cancel, null)
                     .create();
 
             dialog.show();
@@ -68,14 +68,14 @@ TextView tvChangePassword;
                 String saved = prefs.getString("password", null);
 
                 if (!current.equals(saved)) {
-                    etCurrent.setError("Wrong current password");
+                    etCurrent.setError(getString(R.string.error_wrong_password));
                 } else if (newPass.isEmpty()) {
-                    etNew.setError("Enter new password");
+                    etNew.setError(getString(R.string.error_enter_new_password));
                 } else if (!newPass.equals(confirm)) {
-                    etConfirm.setError("Passwords don't match");
+                    etConfirm.setError(getString(R.string.error_passwords_dont_match));
                 } else {
                     prefs.edit().putString("password", newPass).apply();
-                    android.widget.Toast.makeText(this, "Password changed",
+                    android.widget.Toast.makeText(this, R.string.msg_password_changed,
                             android.widget.Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
                 }

@@ -21,6 +21,7 @@ import java.util.Locale;
 
 public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder> {
 
+    private static final String DATE_FORMAT = "dd MMM yyyy, hh:mm a";
     private final List<Note> notes;
 
     public NoteAdapter(List<Note> notes) {
@@ -37,55 +38,66 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     @Override
     public void onBindViewHolder(NoteViewHolder holder, int position) {
-        int adapterPosition = holder.getBindingAdapterPosition();
-        Note note = notes.get(adapterPosition);
+        Note note = notes.get(position);
         holder.tvTitle.setText(note.getTitle());
         holder.tvPreview.setText(note.getContent());
 
-        String formatted = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+        String formatted = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault())
                 .format(new Date(note.getTimestamp()));
         holder.tvTimestamp.setText(formatted);
         holder.itemView.setOnLongClickListener(v -> {
+            int currentPosition = holder.getBindingAdapterPosition();
+            if (currentPosition == RecyclerView.NO_POSITION) return true;
+            Note currentNote = notes.get(currentPosition);
+
             // show popup menu
             PopupMenu popup = new PopupMenu(v.getContext(), v);
-            popup.getMenu().add("Edit");
-            popup.getMenu().add("Delete");
-            popup.getMenu().add("Archive");
-            popup.getMenu().add("Share");
-            popup.getMenu().add("Copy Text");
+            popup.getMenu().add(v.getContext().getString(R.string.menu_edit));
+            popup.getMenu().add(v.getContext().getString(R.string.menu_delete));
+            popup.getMenu().add(v.getContext().getString(R.string.menu_archive));
+            popup.getMenu().add(v.getContext().getString(R.string.menu_share));
+            popup.getMenu().add(v.getContext().getString(R.string.menu_copy_text));
 
             popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
                 @Override
                 public boolean onMenuItemClick(MenuItem item) {
                     String selected = item.getTitle().toString();
-                    if (selected.equals("Delete")) {
-                        note.setDeleted(true);
-                        note.setDeletedAt(System.currentTimeMillis());
-                        NoteDatabase.getInstance(v.getContext()).noteDao().update(note);
-                        notes.remove(adapterPosition);
-                        notifyItemRemoved(adapterPosition);
-                    } else if (selected.equals("Edit")) {
+                    if (selected.equals(v.getContext().getString(R.string.menu_delete))) {
+                        currentNote.setDeleted(true);
+                        currentNote.setDeletedAt(System.currentTimeMillis());
+                        NoteDatabase.databaseWriteExecutor.execute(() -> {
+                            NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
+                            ((HomeActivity) v.getContext()).runOnUiThread(() -> {
+                                notes.remove(currentPosition);
+                                notifyItemRemoved(currentPosition);
+                            });
+                        });
+                    } else if (selected.equals(v.getContext().getString(R.string.menu_edit))) {
                         Intent intent = new Intent(v.getContext(), AddEditNoteActivity.class);
-                        intent.putExtra("note_id", note.getId());
-                        intent.putExtra("note_title", note.getTitle());
-                        intent.putExtra("note_content", note.getContent());
+                        intent.putExtra("note_id", currentNote.getId());
+                        intent.putExtra("note_title", currentNote.getTitle());
+                        intent.putExtra("note_content", currentNote.getContent());
                         v.getContext().startActivity(intent);
-                    } else if (selected.equals("Share")) {
+                    } else if (selected.equals(v.getContext().getString(R.string.menu_share))) {
                         Intent shareIntent = new Intent(Intent.ACTION_SEND);
                         shareIntent.setType("text/plain");
-                        shareIntent.putExtra(Intent.EXTRA_TEXT, note.getTitle() + "\n\n" + note.getContent());
-                        v.getContext().startActivity(Intent.createChooser(shareIntent, "Share note"));
-                    } else if (selected.equals("Copy Text")) {
+                        shareIntent.putExtra(Intent.EXTRA_TEXT, currentNote.getTitle() + "\n\n" + currentNote.getContent());
+                        v.getContext().startActivity(Intent.createChooser(shareIntent, v.getContext().getString(R.string.msg_share_note)));
+                    } else if (selected.equals(v.getContext().getString(R.string.menu_copy_text))) {
                         ClipboardManager clipboard = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                        ClipData clip = ClipData.newPlainText("note", note.getTitle() + "\n\n" + note.getContent());
+                        ClipData clip = ClipData.newPlainText("note", currentNote.getTitle() + "\n\n" + currentNote.getContent());
                         clipboard.setPrimaryClip(clip);
-                        Toast.makeText(v.getContext(), "Copied", Toast.LENGTH_SHORT).show();
-                    } else if (selected.equals("Archive")) {
-                    note.setArchived(true);
-                    NoteDatabase.getInstance(v.getContext()).noteDao().update(note);
-                    notes.remove(adapterPosition);
-                    notifyItemRemoved(adapterPosition);
-                }
+                        Toast.makeText(v.getContext(), R.string.msg_copied, Toast.LENGTH_SHORT).show();
+                    } else if (selected.equals(v.getContext().getString(R.string.menu_archive))) {
+                        currentNote.setArchived(true);
+                        NoteDatabase.databaseWriteExecutor.execute(() -> {
+                            NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
+                            ((HomeActivity) v.getContext()).runOnUiThread(() -> {
+                                notes.remove(currentPosition);
+                                notifyItemRemoved(currentPosition);
+                            });
+                        });
+                    }
                     return true;
                 }
             });

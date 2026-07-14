@@ -27,14 +27,18 @@ Toolbar toolbar;
         setSupportActionBar(toolbar);
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setTitle("Trash");
-        long cutoff = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
-        NoteDatabase.getInstance(this).noteDao().purgeOldDeletedNotes(cutoff);
         recyclerView = findViewById(R.id.rvNotes);
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
 
-        List<Note> notes = NoteDatabase.getInstance(this).noteDao().getDeletedNotes();
-        TrashAdapter adapter = new TrashAdapter(notes);
-        recyclerView.setAdapter(adapter);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            long cutoff = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
+            NoteDatabase.getInstance(this).noteDao().purgeOldDeletedNotes(cutoff);
+            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getDeletedNotes();
+            runOnUiThread(() -> {
+                TrashAdapter adapter = new TrashAdapter(notes);
+                recyclerView.setAdapter(adapter);
+            });
+        });
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {

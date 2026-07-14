@@ -29,9 +29,13 @@ Toolbar toolbar;
         getSupportActionBar().setTitle("Archive");
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
 
-        List<Note> notes = NoteDatabase.getInstance(this).noteDao().getArchivedNotes();
-        ArchiveAdapter adapter = new ArchiveAdapter(notes);
-        recyclerView.setAdapter(adapter);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getArchivedNotes();
+            runOnUiThread(() -> {
+                ArchiveAdapter adapter = new ArchiveAdapter(notes);
+                recyclerView.setAdapter(adapter);
+            });
+        });
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());

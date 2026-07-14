@@ -29,7 +29,7 @@ Button Unlock;
                 public void onClick(View v) {
                     String password = pass.getText().toString().trim();
                     if (password.isEmpty()) {
-                        pass.setError("Password required");
+                        pass.setError(getString(R.string.error_password_required));
                         return;
                     }
                     SharedPreferences prefs = getSharedPreferences("SecureScribe", MODE_PRIVATE);
@@ -46,7 +46,7 @@ Button Unlock;
                         finish();
                     } else {
                         // wrong password
-                        pass.setError("Wrong password");
+                        pass.setError(getString(R.string.error_wrong_password));
                     }
                 }
             });

@@ -1,6 +1,5 @@
 package com.example.securescribe;
 
-import android.icu.text.SimpleDateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -17,6 +17,7 @@ import java.util.Objects;
 
 public class ArchiveAdapter extends RecyclerView.Adapter<ArchiveAdapter.ArchiveViewHolder> {
 
+    private static final String DATE_FORMAT = "dd MMM yyyy, hh:mm a";
     private final List<Note> notes;
     public ArchiveAdapter(List<Note> notes) {
         this.notes = notes;
@@ -33,24 +34,31 @@ public class ArchiveAdapter extends RecyclerView.Adapter<ArchiveAdapter.ArchiveV
 
     @Override
     public void onBindViewHolder( @NonNull ArchiveViewHolder  holder, int position) {
-        int adapterPosition = holder.getBindingAdapterPosition();
-        Note note = notes.get(adapterPosition);
+        Note note = notes.get(position);
 
         holder.tvTitle.setText(note.getTitle());
         holder.tvPreview.setText(note.getContent());
-        holder.tvTimestamp.setText(new SimpleDateFormat("dd MMM yyyy, hh:mm a",
+        holder.tvTimestamp.setText(new SimpleDateFormat(DATE_FORMAT,
                 Locale.getDefault()).format(new Date(note.getTimestamp())));
         holder.itemView.setOnLongClickListener(v -> {
+            int currentPosition = holder.getBindingAdapterPosition();
+            if (currentPosition == RecyclerView.NO_POSITION) return true;
+            Note currentNote = notes.get(currentPosition);
+
             PopupMenu popup = new PopupMenu(v.getContext(), v);
-            popup.getMenu().add("Unarchive");
+            popup.getMenu().add(v.getContext().getString(R.string.menu_unarchive));
 
             popup.setOnMenuItemClickListener(item -> {
                 String selected = Objects.requireNonNull(item.getTitle()).toString();
-                if (selected.equals("Unarchive")) {
-                    note.setArchived(false);
-                    NoteDatabase.getInstance(v.getContext()).noteDao().update(note);
-                    notes.remove(adapterPosition);
-                    notifyItemRemoved(adapterPosition);
+                if (selected.equals(v.getContext().getString(R.string.menu_unarchive))) {
+                    currentNote.setArchived(false);
+                    NoteDatabase.databaseWriteExecutor.execute(() -> {
+                        NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
+                        ((ArchiveActivity) v.getContext()).runOnUiThread(() -> {
+                            notes.remove(currentPosition);
+                            notifyItemRemoved(currentPosition);
+                        });
+                    });
                 }
                 return true;
             });
