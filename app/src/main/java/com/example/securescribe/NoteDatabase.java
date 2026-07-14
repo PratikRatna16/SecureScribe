@@ -70,6 +70,21 @@ public abstract class NoteDatabase extends RoomDatabase {
     public static void rekey(Context context, String currentPassword, String newPassword,
                              Runnable onSuccess, Consumer<Exception> onError) {
         databaseWriteExecutor.execute(() -> {
+            File currentDbFile = context.getDatabasePath(DB_NAME);
+            File tempDbFile = new File(currentDbFile.getPath() + ".rekey_tmp");
+            File backupDbFile = new File(currentDbFile.getPath() + ".rekey_backup");
+
+            int liveCount = 0;
+            try {
+                // Get live count before closing Room
+                NoteDatabase db = getInstance(context);
+                if (db != null) {
+                    liveCount = db.noteDao().getTotalCount();
+                }
+            } catch (Exception e) {
+                // If we can't even get the count, proceed with raw verification only
+            }
+
             // 1. Fully close and nullify Room before touching the file
             synchronized (NoteDatabase.class) {
                 if (instance != null) {
@@ -77,10 +92,6 @@ public abstract class NoteDatabase extends RoomDatabase {
                     instance = null;
                 }
             }
-
-            File currentDbFile = context.getDatabasePath(DB_NAME);
-            File tempDbFile = new File(currentDbFile.getPath() + ".rekey_tmp");
-            File backupDbFile = new File(currentDbFile.getPath() + ".rekey_backup");
 
             if (tempDbFile.exists()) tempDbFile.delete();
 
@@ -113,9 +124,10 @@ public abstract class NoteDatabase extends RoomDatabase {
                 }
                 verifyDb.close();
 
-                // Re-open live briefly to check count if needed, or assume verifiedCount logic
-                // For simplicity and matching v5 plan, we just need to ensure it opens and has data
-                // In a production app, we'd compare against previous count if known.
+                if (verifiedCount != liveCount) {
+                    throw new IllegalStateException("Row count mismatch after export: "
+                            + verifiedCount + " vs " + liveCount);
+                }
 
                 // 5. Atomic swap
                 if (backupDbFile.exists()) backupDbFile.delete();

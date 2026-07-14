@@ -20,6 +20,7 @@ import com.google.android.material.navigation.NavigationView;
 
 
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteException;
 import java.util.List;
 
 public class HomeActivity extends BaseSecureActivity implements NoteActionListener {
@@ -92,7 +93,7 @@ FloatingActionButton FloatAction;
                         adapter.removeItem(position);
                     }
                 });
-            } catch (Exception e) {
+            } catch (SQLiteException e) {
                 NoteDatabase.dbError.postValue(e);
             }
         });
@@ -113,7 +114,7 @@ FloatingActionButton FloatAction;
                         adapter.removeItem(position);
                     }
                 });
-            } catch (Exception e) {
+            } catch (SQLiteException e) {
                 NoteDatabase.dbError.postValue(e);
             }
         });
@@ -143,7 +144,7 @@ FloatingActionButton FloatAction;
                         rv.setAdapter(adapter);
                     }
                 });
-            } catch (Exception e) {
+            } catch (SQLiteException e) {
                 NoteDatabase.dbError.postValue(e);
             }
         });

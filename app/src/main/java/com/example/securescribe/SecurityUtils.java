@@ -12,24 +12,29 @@ import java.security.GeneralSecurityException;
 public class SecurityUtils {
 
     private static final String PREF_FILE_NAME = "secure_prefs";
+    private static SharedPreferences cachedPrefs;
 
-    public static SharedPreferences getEncryptedSharedPreferences(Context context) {
+    public static synchronized SharedPreferences getEncryptedSharedPreferences(Context context) {
+        if (cachedPrefs != null) {
+            return cachedPrefs;
+        }
+
         try {
-            MasterKey masterKey = new MasterKey.Builder(context)
+            MasterKey masterKey = new MasterKey.Builder(context.getApplicationContext())
                     .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                     .build();
 
-            return EncryptedSharedPreferences.create(
-                    context,
+            cachedPrefs = EncryptedSharedPreferences.create(
+                    context.getApplicationContext(),
                     PREF_FILE_NAME,
                     masterKey,
                     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
+            return cachedPrefs;
         } catch (GeneralSecurityException | IOException e) {
-            e.printStackTrace();
-            // Fallback or handle error - for simplicity in this task, return normal prefs but this is a security risk
-            return context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
+            // Fail loud - security fallback is a bypass
+            throw new RuntimeException("Critical Security Error: Could not initialize EncryptedSharedPreferences", e);
         }
     }
 }

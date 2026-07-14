@@ -1,5 +1,6 @@
 package com.example.securescribe;
 
+import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -69,7 +70,7 @@ EditText Title,multiline;
                                 }
                             }
                             runOnUiThread(AddEditNoteActivity.this::finish);
-                        } catch (Exception e) {
+                        } catch (SQLiteException e) {
                             NoteDatabase.dbError.postValue(e);
                         }
                     });
@@ -122,7 +123,7 @@ EditText Title,multiline;
                         }
                     }
                     runOnUiThread(this::finish);
-                } catch (Exception e) {
+                } catch (SQLiteException e) {
                     NoteDatabase.dbError.postValue(e);
                 }
             });

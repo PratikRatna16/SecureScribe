@@ -67,7 +67,7 @@ public abstract class BaseSecureActivity extends AppCompatActivity {
                     resetDatabase();
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
-                    NoteDatabase.dbError.setValue(null);
+                    NoteDatabase.dbError.postValue(null);
                     finishAffinity();
                 })
                 .setCancelable(false)
@@ -75,10 +75,13 @@ public abstract class BaseSecureActivity extends AppCompatActivity {
     }
 
     private void resetDatabase() {
-        NoteDatabase.dbError.setValue(null);
+        NoteDatabase.dbError.postValue(null);
         NoteDatabase.databaseWriteExecutor.execute(() -> {
             // Close DB first
-            NoteDatabase.getInstance(this).close();
+            NoteDatabase db = NoteDatabase.getInstance(this);
+            if (db != null) {
+                db.close();
+            }
             
             File dbFile = getDatabasePath(NoteDatabase.DB_NAME);
             File dbJournal = new File(dbFile.getPath() + "-journal");

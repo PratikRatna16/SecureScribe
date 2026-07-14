@@ -1,5 +1,6 @@
 package com.example.securescribe;
 
+import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
 import androidx.appcompat.widget.Toolbar;
 
@@ -39,7 +40,7 @@ Toolbar toolbar;
                     ArchiveAdapter adapter = new ArchiveAdapter(notes, this);
                     recyclerView.setAdapter(adapter);
                 });
-            } catch (Exception e) {
+            } catch (SQLiteException e) {
                 NoteDatabase.dbError.postValue(e);
             }
         });
@@ -72,7 +73,7 @@ Toolbar toolbar;
                         adapter.removeItem(position);
                     }
                 });
-            } catch (Exception e) {
+            } catch (SQLiteException e) {
                 NoteDatabase.dbError.postValue(e);
             }
         });

@@ -14,6 +14,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import net.sqlcipher.database.SQLiteDatabase;
+
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
@@ -27,14 +29,7 @@ Button Unlock;
         setContentView(R.layout.activity_main);
 
         // Section 3: Recovery check
-        File backup = getDatabasePath(NoteDatabase.DB_NAME + ".rekey_backup");
-        if (backup.exists()) {
-            new AlertDialog.Builder(this)
-                    .setTitle("Incomplete Update")
-                    .setMessage("A previous password change was interrupted. If your new password doesn't work, try your old one.")
-                    .setPositiveButton("OK", null)
-                    .show();
-        }
+        handleRekeyRecovery();
 
         pass = findViewById(R.id.password);
         Unlock = findViewById(R.id.button);
@@ -79,6 +74,10 @@ Button Unlock;
                     } else if (savedPassword.equals(password)) {
                         // correct password
                         onSuccessfulUnlock(prefs);
+                    } else if (verifyPasswordWorks(password)) {
+                        // Password works but doesn't match prefs (likely interrupted rekey)
+                        prefs.edit().putString("password", password).apply();
+                        onSuccessfulUnlock(prefs);
                     } else {
                         // wrong password
                         failedAttempts++;
@@ -99,11 +98,56 @@ Button Unlock;
     }
 
     private void onSuccessfulUnlock(SharedPreferences prefs) {
+        // Cleanup backup if it still exists after successful login
+        File backup = getDatabasePath(NoteDatabase.DB_NAME + ".rekey_backup");
+        if (backup.exists()) {
+            backup.delete();
+        }
+
         prefs.edit()
                 .putInt("failed_attempts", 0)
                 .putLong("last_unlocked", System.currentTimeMillis())
                 .apply();
         startActivity(new Intent(MainActivity.this, HomeActivity.class));
         finish();
+    }
+
+    private void handleRekeyRecovery() {
+        File backup = getDatabasePath(NoteDatabase.DB_NAME + ".rekey_backup");
+        if (!backup.exists()) return;
+
+        SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(this);
+        String storedPassword = prefs.getString("password", "");
+
+        // Try the stored password first (might be old or already updated)
+        if (verifyPasswordWorks(storedPassword)) {
+            backup.delete();
+            return;
+        }
+
+        // If stored fails, we need to prompt the user to try the one they were setting
+        new AlertDialog.Builder(this)
+                .setTitle("Update Recovery")
+                .setMessage("A previous password change was interrupted. Please enter the password you were trying to set.")
+                .setCancelable(false)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    pass.setHint("Enter new password");
+                })
+                .show();
+    }
+
+    private boolean verifyPasswordWorks(String password) {
+        if (password == null || password.isEmpty()) return false;
+        File dbFile = getDatabasePath(NoteDatabase.DB_NAME);
+        if (!dbFile.exists()) return true; // New install
+
+        SQLiteDatabase.loadLibs(this);
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile.getAbsolutePath(),
+                password, null, SQLiteDatabase.OPEN_READONLY)) {
+            db.rawQuery("SELECT count(*) FROM sqlite_master", null).close();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
