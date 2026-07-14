@@ -46,4 +46,6 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     implementation(libs.room.runtime)
     annotationProcessor(libs.room.compiler)
+    implementation(libs.security.crypto)
+    implementation(libs.sqlcipher)
 }

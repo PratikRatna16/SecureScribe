@@ -19,9 +19,10 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 
 
+import android.content.SharedPreferences;
 import java.util.List;
 
-public class HomeActivity extends AppCompatActivity {
+public class HomeActivity extends BaseSecureActivity implements NoteActionListener {
 RecyclerView rv;
 FloatingActionButton FloatAction;
     @Override
@@ -74,14 +75,58 @@ FloatingActionButton FloatAction;
             return insets;
         });
     }
+
+    @Override
+    public void onNoteDeleted(Note note, int position) {
+        note.setDeleted(true);
+        note.setDeletedAt(System.currentTimeMillis());
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            NoteDatabase.getInstance(this).noteDao().update(note);
+            runOnUiThread(() -> {
+                if (rv.getAdapter() instanceof NoteAdapter) {
+                    NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
+                    adapter.removeItem(position);
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onNoteArchived(Note note, int position) {
+        note.setArchived(true);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            NoteDatabase.getInstance(this).noteDao().update(note);
+            runOnUiThread(() -> {
+                if (rv.getAdapter() instanceof NoteAdapter) {
+                    NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
+                    adapter.removeItem(position);
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onNoteUnarchived(Note note, int position) {}
+
+    @Override
+    public void onNoteRestored(Note note, int position) {}
+
+    @Override
+    public void onNotePermanentlyDeleted(Note note, int position) {}
+
     @Override
     protected void onResume() {
         super.onResume();
+
         NoteDatabase.databaseWriteExecutor.execute(() -> {
             List<Note> notes = NoteDatabase.getInstance(this).noteDao().getAllNotes();
             runOnUiThread(() -> {
-                NoteAdapter adapter = new NoteAdapter(notes);
-                rv.setAdapter(adapter);
+                if (rv.getAdapter() instanceof NoteAdapter) {
+                    ((NoteAdapter) rv.getAdapter()).setNotes(notes);
+                } else {
+                    NoteAdapter adapter = new NoteAdapter(notes, this);
+                    rv.setAdapter(adapter);
+                }
             });
         });
     }

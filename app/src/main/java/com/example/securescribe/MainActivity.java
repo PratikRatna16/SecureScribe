@@ -16,6 +16,9 @@ import androidx.core.view.WindowInsetsCompat;
 public class MainActivity extends AppCompatActivity {
 EditText pass;
 Button Unlock;
+    private int failedAttempts = 0;
+    private long lastAttemptTime = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,20 +35,40 @@ Button Unlock;
                         pass.setError(getString(R.string.error_password_required));
                         return;
                     }
-                    SharedPreferences prefs = getSharedPreferences("SecureScribe", MODE_PRIVATE);
+
+                    // Brute-force protection
+                    long currentTime = System.currentTimeMillis();
+                    long lockoutTime = (long) Math.pow(2, failedAttempts - 3) * 1000; // Delay after 3 failed attempts
+                    if (failedAttempts >= 3 && currentTime - lastAttemptTime < lockoutTime) {
+                        long remaining = (lockoutTime - (currentTime - lastAttemptTime)) / 1000;
+                        pass.setError("Too many attempts. Try again in " + remaining + "s");
+                        return;
+                    }
+
+                    SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(MainActivity.this);
                     String savedPassword = prefs.getString("password", null);
+
+                    if (savedPassword == null) {
+                        // Migration check: if old plaintext exists, move it to encrypted
+                        SharedPreferences oldPrefs = getSharedPreferences("SecureScribe", MODE_PRIVATE);
+                        savedPassword = oldPrefs.getString("password", null);
+                        if (savedPassword != null) {
+                            prefs.edit().putString("password", savedPassword).apply();
+                            oldPrefs.edit().remove("password").apply();
+                        }
+                    }
 
                     if (savedPassword == null) {
                         // first launch — save this as master password
                         prefs.edit().putString("password", password).apply();
-                        startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                        finish();
+                        onSuccessfulUnlock();
                     } else if (savedPassword.equals(password)) {
                         // correct password
-                        startActivity(new Intent(MainActivity.this, HomeActivity.class));
-                        finish();
+                        onSuccessfulUnlock();
                     } else {
                         // wrong password
+                        failedAttempts++;
+                        lastAttemptTime = System.currentTimeMillis();
                         pass.setError(getString(R.string.error_wrong_password));
                     }
                 }
@@ -56,5 +79,13 @@ Button Unlock;
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+    }
+
+    private void onSuccessfulUnlock() {
+        failedAttempts = 0;
+        SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(this);
+        prefs.edit().putLong("last_unlocked", System.currentTimeMillis()).apply();
+        startActivity(new Intent(MainActivity.this, HomeActivity.class));
+        finish();
     }
 }

@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import java.util.List;
 import java.util.Objects;
 
-public class ArchiveActivity extends AppCompatActivity {
+public class ArchiveActivity extends BaseSecureActivity implements NoteActionListener {
 RecyclerView recyclerView;
 Toolbar toolbar;
     @Override
@@ -32,7 +32,7 @@ Toolbar toolbar;
         NoteDatabase.databaseWriteExecutor.execute(() -> {
             List<Note> notes = NoteDatabase.getInstance(this).noteDao().getArchivedNotes();
             runOnUiThread(() -> {
-                ArchiveAdapter adapter = new ArchiveAdapter(notes);
+                ArchiveAdapter adapter = new ArchiveAdapter(notes, this);
                 recyclerView.setAdapter(adapter);
             });
         });
@@ -43,4 +43,30 @@ Toolbar toolbar;
             return insets;
         });
     }
+
+    @Override
+    public void onNoteDeleted(Note note, int position) {}
+
+    @Override
+    public void onNoteArchived(Note note, int position) {}
+
+    @Override
+    public void onNoteUnarchived(Note note, int position) {
+        note.setArchived(false);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            NoteDatabase.getInstance(this).noteDao().update(note);
+            runOnUiThread(() -> {
+                if (recyclerView.getAdapter() instanceof ArchiveAdapter) {
+                    ArchiveAdapter adapter = (ArchiveAdapter) recyclerView.getAdapter();
+                    adapter.removeItem(position);
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onNoteRestored(Note note, int position) {}
+
+    @Override
+    public void onNotePermanentlyDeleted(Note note, int position) {}
 }

@@ -16,7 +16,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.util.Objects;
 
-public class AddEditNoteActivity extends AppCompatActivity {
+public class AddEditNoteActivity extends BaseSecureActivity {
 Toolbar toolbar;
 EditText Title,multiline;
     int noteId = -1;
@@ -53,9 +53,13 @@ EditText Title,multiline;
                             Note note = new Note(title, content, System.currentTimeMillis());
                             NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().insert(note);
                         } else {
-                            Note note = new Note(title, content, System.currentTimeMillis());
-                            note.setId(noteId);
-                            NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().update(note);
+                            Note note = NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().getNoteById(noteId);
+                            if (note != null) {
+                                note.title = title;
+                                note.content = content;
+                                note.timestamp = System.currentTimeMillis();
+                                NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().update(note);
+                            }
                         }
                         runOnUiThread(AddEditNoteActivity.this::finish);
                     });
@@ -94,9 +98,13 @@ EditText Title,multiline;
                     Note note = new Note(title, content, System.currentTimeMillis());
                     NoteDatabase.getInstance(this).noteDao().insert(note);
                 } else {
-                    Note note = new Note(title, content, System.currentTimeMillis());
-                    note.setId(noteId);
-                    NoteDatabase.getInstance(this).noteDao().update(note);
+                    Note note = NoteDatabase.getInstance(this).noteDao().getNoteById(noteId);
+                    if (note != null) {
+                        note.title = title;
+                        note.content = content;
+                        note.timestamp = System.currentTimeMillis();
+                        NoteDatabase.getInstance(this).noteDao().update(note);
+                    }
                 }
                 runOnUiThread(this::finish);
             });

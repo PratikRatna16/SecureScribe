@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import java.util.List;
 import java.util.Objects;
 
-public class TrashActivity extends AppCompatActivity {
+public class TrashActivity extends BaseSecureActivity implements NoteActionListener {
 RecyclerView recyclerView;
 Toolbar toolbar;
     @Override
@@ -35,7 +35,7 @@ Toolbar toolbar;
             NoteDatabase.getInstance(this).noteDao().purgeOldDeletedNotes(cutoff);
             List<Note> notes = NoteDatabase.getInstance(this).noteDao().getDeletedNotes();
             runOnUiThread(() -> {
-                TrashAdapter adapter = new TrashAdapter(notes);
+                TrashAdapter adapter = new TrashAdapter(notes, this);
                 recyclerView.setAdapter(adapter);
             });
         });
@@ -45,6 +45,43 @@ Toolbar toolbar;
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
+        });
+    }
+
+    @Override
+    public void onNoteDeleted(Note note, int position) {}
+
+    @Override
+    public void onNoteArchived(Note note, int position) {}
+
+    @Override
+    public void onNoteUnarchived(Note note, int position) {}
+
+    @Override
+    public void onNoteRestored(Note note, int position) {
+        note.setDeleted(false);
+        note.setDeletedAt(0);
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            NoteDatabase.getInstance(this).noteDao().update(note);
+            runOnUiThread(() -> {
+                if (recyclerView.getAdapter() instanceof TrashAdapter) {
+                    TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
+                    adapter.removeItem(position);
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onNotePermanentlyDeleted(Note note, int position) {
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            NoteDatabase.getInstance(this).noteDao().delete(note);
+            runOnUiThread(() -> {
+                if (recyclerView.getAdapter() instanceof TrashAdapter) {
+                    TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
+                    adapter.removeItem(position);
+                }
+            });
         });
     }
 }

@@ -31,4 +31,7 @@ public interface NoteDao {
     @Query("DELETE FROM notes WHERE is_deleted = 1 AND deleted_at < :cutoff")
     void purgeOldDeletedNotes(long cutoff);
 
+    @Query("SELECT * FROM notes WHERE id = :id")
+    Note getNoteById(int id);
+
 }

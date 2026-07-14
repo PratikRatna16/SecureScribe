@@ -12,7 +12,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.util.Objects;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends BaseSecureActivity {
 TextView tvChangePassword;
 
     @Override
@@ -64,7 +64,7 @@ TextView tvChangePassword;
                 String confirm = etConfirm.getText().toString().trim();
 
                 android.content.SharedPreferences prefs =
-                        getSharedPreferences("SecureScribe", MODE_PRIVATE);
+                        SecurityUtils.getEncryptedSharedPreferences(this);
                 String saved = prefs.getString("password", null);
 
                 if (!current.equals(saved)) {

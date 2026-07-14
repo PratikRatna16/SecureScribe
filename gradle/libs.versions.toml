@@ -9,6 +9,8 @@ activity = "1.13.0"
 constraintlayout = "2.2.1"
 recyclerview = "1.4.0"
 roomRuntime = "2.8.4"
+securityCrypto = "1.1.0"
+sqlcipher = "4.5.4"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -21,6 +23,8 @@ constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayo
 recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
+security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+sqlcipher = { module = "net.zetetic:android-database-sqlcipher", version.ref = "sqlcipher" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

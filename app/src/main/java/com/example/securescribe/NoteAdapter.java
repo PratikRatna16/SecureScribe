@@ -23,9 +23,11 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     private static final String DATE_FORMAT = "dd MMM yyyy, hh:mm a";
     private final List<Note> notes;
+    private final NoteActionListener listener;
 
-    public NoteAdapter(List<Note> notes) {
+    public NoteAdapter(List<Note> notes, NoteActionListener listener) {
         this.notes = notes;
+        this.listener = listener;
     }
 
     @NonNull
@@ -63,15 +65,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 public boolean onMenuItemClick(MenuItem item) {
                     String selected = item.getTitle().toString();
                     if (selected.equals(v.getContext().getString(R.string.menu_delete))) {
-                        currentNote.setDeleted(true);
-                        currentNote.setDeletedAt(System.currentTimeMillis());
-                        NoteDatabase.databaseWriteExecutor.execute(() -> {
-                            NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
-                            ((HomeActivity) v.getContext()).runOnUiThread(() -> {
-                                notes.remove(currentPosition);
-                                notifyItemRemoved(currentPosition);
-                            });
-                        });
+                        if (listener != null) {
+                            listener.onNoteDeleted(currentNote, currentPosition);
+                        }
                     } else if (selected.equals(v.getContext().getString(R.string.menu_edit))) {
                         Intent intent = new Intent(v.getContext(), AddEditNoteActivity.class);
                         intent.putExtra("note_id", currentNote.getId());
@@ -89,14 +85,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                         clipboard.setPrimaryClip(clip);
                         Toast.makeText(v.getContext(), R.string.msg_copied, Toast.LENGTH_SHORT).show();
                     } else if (selected.equals(v.getContext().getString(R.string.menu_archive))) {
-                        currentNote.setArchived(true);
-                        NoteDatabase.databaseWriteExecutor.execute(() -> {
-                            NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
-                            ((HomeActivity) v.getContext()).runOnUiThread(() -> {
-                                notes.remove(currentPosition);
-                                notifyItemRemoved(currentPosition);
-                            });
-                        });
+                        if (listener != null) {
+                            listener.onNoteArchived(currentNote, currentPosition);
+                        }
                     }
                     return true;
                 }
@@ -109,6 +100,19 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     @Override
     public int getItemCount() {
         return notes.size();
+    }
+
+    public void removeItem(int position) {
+        if (position >= 0 && position < notes.size()) {
+            notes.remove(position);
+            notifyItemRemoved(position);
+        }
+    }
+
+    public void setNotes(List<Note> newNotes) {
+        this.notes.clear();
+        this.notes.addAll(newNotes);
+        notifyDataSetChanged();
     }
 
     static class NoteViewHolder extends RecyclerView.ViewHolder {

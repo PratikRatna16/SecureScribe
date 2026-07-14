@@ -19,8 +19,11 @@ public class ArchiveAdapter extends RecyclerView.Adapter<ArchiveAdapter.ArchiveV
 
     private static final String DATE_FORMAT = "dd MMM yyyy, hh:mm a";
     private final List<Note> notes;
-    public ArchiveAdapter(List<Note> notes) {
+    private final NoteActionListener listener;
+
+    public ArchiveAdapter(List<Note> notes, NoteActionListener listener) {
         this.notes = notes;
+        this.listener = listener;
     }
 
     @NonNull
@@ -51,14 +54,9 @@ public class ArchiveAdapter extends RecyclerView.Adapter<ArchiveAdapter.ArchiveV
             popup.setOnMenuItemClickListener(item -> {
                 String selected = Objects.requireNonNull(item.getTitle()).toString();
                 if (selected.equals(v.getContext().getString(R.string.menu_unarchive))) {
-                    currentNote.setArchived(false);
-                    NoteDatabase.databaseWriteExecutor.execute(() -> {
-                        NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
-                        ((ArchiveActivity) v.getContext()).runOnUiThread(() -> {
-                            notes.remove(currentPosition);
-                            notifyItemRemoved(currentPosition);
-                        });
-                    });
+                    if (listener != null) {
+                        listener.onNoteUnarchived(currentNote, currentPosition);
+                    }
                 }
                 return true;
             });
@@ -71,6 +69,14 @@ public class ArchiveAdapter extends RecyclerView.Adapter<ArchiveAdapter.ArchiveV
     public int getItemCount() {
         return notes.size();
     }
+
+    public void removeItem(int position) {
+        if (position >= 0 && position < notes.size()) {
+            notes.remove(position);
+            notifyItemRemoved(position);
+        }
+    }
+
     static class ArchiveViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvPreview, tvTimestamp;
         public ArchiveViewHolder(View itemView) {

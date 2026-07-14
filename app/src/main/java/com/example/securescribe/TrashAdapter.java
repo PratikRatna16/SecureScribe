@@ -17,9 +17,11 @@ import java.util.Locale;
 public class TrashAdapter extends RecyclerView.Adapter<TrashAdapter.TrashViewHolder> {
     private static final String DATE_FORMAT = "dd MMM yyyy, hh:mm a";
     private final List<Note> notes;
+    private final NoteActionListener listener;
 
-    public TrashAdapter(List<Note> notes) {
+    public TrashAdapter(List<Note> notes, NoteActionListener listener) {
         this.notes = notes;
+        this.listener = listener;
     }
 
     @NonNull
@@ -53,23 +55,13 @@ public class TrashAdapter extends RecyclerView.Adapter<TrashAdapter.TrashViewHol
             popup.setOnMenuItemClickListener(item -> {
                 String selected = item.getTitle().toString();
                 if (selected.equals(v.getContext().getString(R.string.menu_restore))) {
-                    currentNote.setDeleted(false);
-                    currentNote.setDeletedAt(0);
-                    NoteDatabase.databaseWriteExecutor.execute(() -> {
-                        NoteDatabase.getInstance(v.getContext()).noteDao().update(currentNote);
-                        ((TrashActivity) v.getContext()).runOnUiThread(() -> {
-                            notes.remove(currentPosition);
-                            notifyItemRemoved(currentPosition);
-                        });
-                    });
+                    if (listener != null) {
+                        listener.onNoteRestored(currentNote, currentPosition);
+                    }
                 } else if (selected.equals(v.getContext().getString(R.string.menu_delete_forever))) {
-                    NoteDatabase.databaseWriteExecutor.execute(() -> {
-                        NoteDatabase.getInstance(v.getContext()).noteDao().delete(currentNote);
-                        ((TrashActivity) v.getContext()).runOnUiThread(() -> {
-                            notes.remove(currentPosition);
-                            notifyItemRemoved(currentPosition);
-                        });
-                    });
+                    if (listener != null) {
+                        listener.onNotePermanentlyDeleted(currentNote, currentPosition);
+                    }
                 }
                 return true;
             });
@@ -81,6 +73,13 @@ public class TrashAdapter extends RecyclerView.Adapter<TrashAdapter.TrashViewHol
     @Override
     public int getItemCount() {
         return notes.size();
+    }
+
+    public void removeItem(int position) {
+        if (position >= 0 && position < notes.size()) {
+            notes.remove(position);
+            notifyItemRemoved(position);
+        }
     }
 
     static class TrashViewHolder extends RecyclerView.ViewHolder {
