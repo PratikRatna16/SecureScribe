@@ -34,4 +34,7 @@ public interface NoteDao {
     @Query("SELECT * FROM notes WHERE id = :id")
     Note getNoteById(int id);
 
+    @Query("SELECT COUNT(*) FROM notes")
+    int getTotalCount();
+
 }

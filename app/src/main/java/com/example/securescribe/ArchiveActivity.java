@@ -29,12 +29,19 @@ Toolbar toolbar;
         getSupportActionBar().setTitle("Archive");
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
 
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getArchivedNotes();
-            runOnUiThread(() -> {
-                ArchiveAdapter adapter = new ArchiveAdapter(notes, this);
-                recyclerView.setAdapter(adapter);
-            });
+            try {
+                List<Note> notes = db.noteDao().getArchivedNotes();
+                runOnUiThread(() -> {
+                    ArchiveAdapter adapter = new ArchiveAdapter(notes, this);
+                    recyclerView.setAdapter(adapter);
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -52,15 +59,22 @@ Toolbar toolbar;
 
     @Override
     public void onNoteUnarchived(Note note, int position) {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         note.setArchived(false);
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            NoteDatabase.getInstance(this).noteDao().update(note);
-            runOnUiThread(() -> {
-                if (recyclerView.getAdapter() instanceof ArchiveAdapter) {
-                    ArchiveAdapter adapter = (ArchiveAdapter) recyclerView.getAdapter();
-                    adapter.removeItem(position);
-                }
-            });
+            try {
+                db.noteDao().update(note);
+                runOnUiThread(() -> {
+                    if (recyclerView.getAdapter() instanceof ArchiveAdapter) {
+                        ArchiveAdapter adapter = (ArchiveAdapter) recyclerView.getAdapter();
+                        adapter.removeItem(position);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
     }
 

@@ -48,20 +48,30 @@ EditText Title,multiline;
                 String content = multiline.getText().toString().trim();
 
                 if (!title.isEmpty()) {
+                    NoteDatabase db = NoteDatabase.getInstance(AddEditNoteActivity.this);
+                    if (db == null) {
+                        finish();
+                        return;
+                    }
+
                     NoteDatabase.databaseWriteExecutor.execute(() -> {
-                        if (noteId == -1) {
-                            Note note = new Note(title, content, System.currentTimeMillis());
-                            NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().insert(note);
-                        } else {
-                            Note note = NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().getNoteById(noteId);
-                            if (note != null) {
-                                note.title = title;
-                                note.content = content;
-                                note.timestamp = System.currentTimeMillis();
-                                NoteDatabase.getInstance(AddEditNoteActivity.this).noteDao().update(note);
+                        try {
+                            if (noteId == -1) {
+                                Note note = new Note(title, content, System.currentTimeMillis());
+                                db.noteDao().insert(note);
+                            } else {
+                                Note note = db.noteDao().getNoteById(noteId);
+                                if (note != null) {
+                                    note.title = title;
+                                    note.content = content;
+                                    note.timestamp = System.currentTimeMillis();
+                                    db.noteDao().update(note);
+                                }
                             }
+                            runOnUiThread(AddEditNoteActivity.this::finish);
+                        } catch (Exception e) {
+                            NoteDatabase.dbError.postValue(e);
                         }
-                        runOnUiThread(AddEditNoteActivity.this::finish);
                     });
                 } else {
                     finish();
@@ -93,20 +103,28 @@ EditText Title,multiline;
                 Title.setError(getString(R.string.error_title_required));
                 return true;
             }
+
+            NoteDatabase db = NoteDatabase.getInstance(this);
+            if (db == null) return true;
+
             NoteDatabase.databaseWriteExecutor.execute(() -> {
-                if (noteId == -1) {
-                    Note note = new Note(title, content, System.currentTimeMillis());
-                    NoteDatabase.getInstance(this).noteDao().insert(note);
-                } else {
-                    Note note = NoteDatabase.getInstance(this).noteDao().getNoteById(noteId);
-                    if (note != null) {
-                        note.title = title;
-                        note.content = content;
-                        note.timestamp = System.currentTimeMillis();
-                        NoteDatabase.getInstance(this).noteDao().update(note);
+                try {
+                    if (noteId == -1) {
+                        Note note = new Note(title, content, System.currentTimeMillis());
+                        db.noteDao().insert(note);
+                    } else {
+                        Note note = db.noteDao().getNoteById(noteId);
+                        if (note != null) {
+                            note.title = title;
+                            note.content = content;
+                            note.timestamp = System.currentTimeMillis();
+                            db.noteDao().update(note);
+                        }
                     }
+                    runOnUiThread(this::finish);
+                } catch (Exception e) {
+                    NoteDatabase.dbError.postValue(e);
                 }
-                runOnUiThread(this::finish);
             });
             return true;
         }

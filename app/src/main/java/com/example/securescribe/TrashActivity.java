@@ -30,14 +30,21 @@ Toolbar toolbar;
         recyclerView = findViewById(R.id.rvNotes);
         recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL));
 
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            long cutoff = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
-            NoteDatabase.getInstance(this).noteDao().purgeOldDeletedNotes(cutoff);
-            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getDeletedNotes();
-            runOnUiThread(() -> {
-                TrashAdapter adapter = new TrashAdapter(notes, this);
-                recyclerView.setAdapter(adapter);
-            });
+            try {
+                long cutoff = System.currentTimeMillis() - (7L * 24 * 60 * 60 * 1000);
+                db.noteDao().purgeOldDeletedNotes(cutoff);
+                List<Note> notes = db.noteDao().getDeletedNotes();
+                runOnUiThread(() -> {
+                    TrashAdapter adapter = new TrashAdapter(notes, this);
+                    recyclerView.setAdapter(adapter);
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
 
 
@@ -59,29 +66,43 @@ Toolbar toolbar;
 
     @Override
     public void onNoteRestored(Note note, int position) {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         note.setDeleted(false);
         note.setDeletedAt(0);
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            NoteDatabase.getInstance(this).noteDao().update(note);
-            runOnUiThread(() -> {
-                if (recyclerView.getAdapter() instanceof TrashAdapter) {
-                    TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
-                    adapter.removeItem(position);
-                }
-            });
+            try {
+                db.noteDao().update(note);
+                runOnUiThread(() -> {
+                    if (recyclerView.getAdapter() instanceof TrashAdapter) {
+                        TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
+                        adapter.removeItem(position);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
     }
 
     @Override
     public void onNotePermanentlyDeleted(Note note, int position) {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            NoteDatabase.getInstance(this).noteDao().delete(note);
-            runOnUiThread(() -> {
-                if (recyclerView.getAdapter() instanceof TrashAdapter) {
-                    TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
-                    adapter.removeItem(position);
-                }
-            });
+            try {
+                db.noteDao().delete(note);
+                runOnUiThread(() -> {
+                    if (recyclerView.getAdapter() instanceof TrashAdapter) {
+                        TrashAdapter adapter = (TrashAdapter) recyclerView.getAdapter();
+                        adapter.removeItem(position);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
     }
 }

@@ -10,6 +10,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.io.File;
 import java.util.Objects;
 
 public class SettingsActivity extends BaseSecureActivity {
@@ -74,10 +75,30 @@ TextView tvChangePassword;
                 } else if (!newPass.equals(confirm)) {
                     etConfirm.setError(getString(R.string.error_passwords_dont_match));
                 } else {
-                    prefs.edit().putString("password", newPass).apply();
-                    android.widget.Toast.makeText(this, R.string.msg_password_changed,
-                            android.widget.Toast.LENGTH_SHORT).show();
-                    dialog.dismiss();
+                    android.app.ProgressDialog progressDialog = new android.app.ProgressDialog(this);
+                    progressDialog.setMessage("Rekeying database...");
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
+
+                    NoteDatabase.rekey(this, current, newPass, () -> {
+                        runOnUiThread(() -> {
+                            prefs.edit().putString("password", newPass).apply();
+
+                            File backup = getDatabasePath(NoteDatabase.DB_NAME + ".rekey_backup");
+                            if (backup.exists()) backup.delete();
+
+                            progressDialog.dismiss();
+                            android.widget.Toast.makeText(this, R.string.msg_password_changed,
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                        });
+                    }, e -> {
+                        runOnUiThread(() -> {
+                            progressDialog.dismiss();
+                            android.util.Log.e("SecureScribe", "Rekey failed", e);
+                            etNew.setError("Rekey failed. Check logs.");
+                        });
+                    });
                 }
             });
         });

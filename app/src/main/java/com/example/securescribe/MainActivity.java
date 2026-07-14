@@ -8,22 +8,33 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.io.File;
+
 public class MainActivity extends AppCompatActivity {
 EditText pass;
 Button Unlock;
-    private int failedAttempts = 0;
-    private long lastAttemptTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
+
+        // Section 3: Recovery check
+        File backup = getDatabasePath(NoteDatabase.DB_NAME + ".rekey_backup");
+        if (backup.exists()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Incomplete Update")
+                    .setMessage("A previous password change was interrupted. If your new password doesn't work, try your old one.")
+                    .setPositiveButton("OK", null)
+                    .show();
+        }
 
         pass = findViewById(R.id.password);
         Unlock = findViewById(R.id.button);
@@ -37,6 +48,10 @@ Button Unlock;
                     }
 
                     // Brute-force protection
+                    SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(MainActivity.this);
+                    int failedAttempts = prefs.getInt("failed_attempts", 0);
+                    long lastAttemptTime = prefs.getLong("last_attempt_time", 0);
+
                     long currentTime = System.currentTimeMillis();
                     long lockoutTime = (long) Math.pow(2, failedAttempts - 3) * 1000; // Delay after 3 failed attempts
                     if (failedAttempts >= 3 && currentTime - lastAttemptTime < lockoutTime) {
@@ -45,7 +60,6 @@ Button Unlock;
                         return;
                     }
 
-                    SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(MainActivity.this);
                     String savedPassword = prefs.getString("password", null);
 
                     if (savedPassword == null) {
@@ -61,14 +75,17 @@ Button Unlock;
                     if (savedPassword == null) {
                         // first launch — save this as master password
                         prefs.edit().putString("password", password).apply();
-                        onSuccessfulUnlock();
+                        onSuccessfulUnlock(prefs);
                     } else if (savedPassword.equals(password)) {
                         // correct password
-                        onSuccessfulUnlock();
+                        onSuccessfulUnlock(prefs);
                     } else {
                         // wrong password
                         failedAttempts++;
-                        lastAttemptTime = System.currentTimeMillis();
+                        prefs.edit()
+                                .putInt("failed_attempts", failedAttempts)
+                                .putLong("last_attempt_time", System.currentTimeMillis())
+                                .apply();
                         pass.setError(getString(R.string.error_wrong_password));
                     }
                 }
@@ -81,10 +98,11 @@ Button Unlock;
         });
     }
 
-    private void onSuccessfulUnlock() {
-        failedAttempts = 0;
-        SharedPreferences prefs = SecurityUtils.getEncryptedSharedPreferences(this);
-        prefs.edit().putLong("last_unlocked", System.currentTimeMillis()).apply();
+    private void onSuccessfulUnlock(SharedPreferences prefs) {
+        prefs.edit()
+                .putInt("failed_attempts", 0)
+                .putLong("last_unlocked", System.currentTimeMillis())
+                .apply();
         startActivity(new Intent(MainActivity.this, HomeActivity.class));
         finish();
     }

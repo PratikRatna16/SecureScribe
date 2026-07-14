@@ -78,30 +78,44 @@ FloatingActionButton FloatAction;
 
     @Override
     public void onNoteDeleted(Note note, int position) {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         note.setDeleted(true);
         note.setDeletedAt(System.currentTimeMillis());
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            NoteDatabase.getInstance(this).noteDao().update(note);
-            runOnUiThread(() -> {
-                if (rv.getAdapter() instanceof NoteAdapter) {
-                    NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
-                    adapter.removeItem(position);
-                }
-            });
+            try {
+                db.noteDao().update(note);
+                runOnUiThread(() -> {
+                    if (rv.getAdapter() instanceof NoteAdapter) {
+                        NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
+                        adapter.removeItem(position);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
     }
 
     @Override
     public void onNoteArchived(Note note, int position) {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
         note.setArchived(true);
         NoteDatabase.databaseWriteExecutor.execute(() -> {
-            NoteDatabase.getInstance(this).noteDao().update(note);
-            runOnUiThread(() -> {
-                if (rv.getAdapter() instanceof NoteAdapter) {
-                    NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
-                    adapter.removeItem(position);
-                }
-            });
+            try {
+                db.noteDao().update(note);
+                runOnUiThread(() -> {
+                    if (rv.getAdapter() instanceof NoteAdapter) {
+                        NoteAdapter adapter = (NoteAdapter) rv.getAdapter();
+                        adapter.removeItem(position);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
         });
     }
 
@@ -114,20 +128,30 @@ FloatingActionButton FloatAction;
     @Override
     public void onNotePermanentlyDeleted(Note note, int position) {}
 
+    private void fetchNotes() {
+        NoteDatabase db = NoteDatabase.getInstance(this);
+        if (db == null) return;
+
+        NoteDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                List<Note> notes = db.noteDao().getAllNotes();
+                runOnUiThread(() -> {
+                    if (rv.getAdapter() instanceof NoteAdapter) {
+                        ((NoteAdapter) rv.getAdapter()).setNotes(notes);
+                    } else {
+                        NoteAdapter adapter = new NoteAdapter(notes, this);
+                        rv.setAdapter(adapter);
+                    }
+                });
+            } catch (Exception e) {
+                NoteDatabase.dbError.postValue(e);
+            }
+        });
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
-
-        NoteDatabase.databaseWriteExecutor.execute(() -> {
-            List<Note> notes = NoteDatabase.getInstance(this).noteDao().getAllNotes();
-            runOnUiThread(() -> {
-                if (rv.getAdapter() instanceof NoteAdapter) {
-                    ((NoteAdapter) rv.getAdapter()).setNotes(notes);
-                } else {
-                    NoteAdapter adapter = new NoteAdapter(notes, this);
-                    rv.setAdapter(adapter);
-                }
-            });
-        });
+        fetchNotes();
     }
 }
